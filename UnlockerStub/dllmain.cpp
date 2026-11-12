@@ -5,6 +5,7 @@
 #include <algorithm>
 #include "Utils.h"
 #include "Zydis.h"
+#include "FpsClamp.h"
 
 #pragma comment(lib, "dbghelp.lib")
 #pragma comment(lib, "ntdll.lib")
@@ -321,8 +322,13 @@ bool InstallHook()
 DWORD __stdcall ThreadProc(LPVOID lpParameter)
 {
 	const auto processName = Utils::GetModulePath(nullptr);
+	FpsClamp::Log(L"stub thread started in %s, module base %p", processName.c_str(), ModuleBase);
+
 	if (!processName.contains(L"YuanShen.exe") && !processName.contains(L"GenshinImpact.exe"))
+	{
+		FpsClamp::Log(L"not a supported game process, standing down");
 		return 0;
+	}
 
 	const auto processDirectory = processName.substr(0, processName.find_last_of(L'\\'));
 	SetCurrentDirectoryW(processDirectory.c_str());
@@ -331,26 +337,86 @@ DWORD __stdcall ThreadProc(LPVOID lpParameter)
 	//AddVectoredExceptionHandler(1, VectoredExceptionHandler);
 
 	constexpr auto szGuid = "Global\\2DE95FDC-6AB7-4593-BFE6-760DD4AB422B";
-	const auto hMapFile = HandleGuard(OpenFileMappingA(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, szGuid), CloseHandle);
-	if (!hMapFile)
-	{
-		Utils::ShowWin32Error(L"OpenFileMappingA");
-		return 0;
-	}
 
-	const auto lpView = MappedMemoryGuard(MapViewOfFile(hMapFile, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0), UnmapViewOfFile);
-	if (!lpView)
-	{
-		Utils::ShowWin32Error(L"MapViewOfFile");
-		return 0;
-	}
+	// Normally this stub reaches the game through the launcher's window hook, after the
+	// shared memory exists. An extra injected copy (DllList) is mapped while the game
+	// process is still being created, before IpcService.Start() creates the mapping, so the
+	// shared memory is optional here: without it this instance only applies the clamp and
+	// leaves the unlock loop to the stub the launcher loaded itself.
+	HANDLE hMapFile = OpenFileMappingA(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, szGuid);
+	void* lpView = nullptr;
+	IPCData* ipcData = nullptr;
 
-	const auto ipcData = static_cast<IPCData*>(lpView.Get());
+	if (hMapFile)
+	{
+		lpView = MapViewOfFile(hMapFile, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+		if (!lpView)
+		{
+			Utils::ShowWin32Error(L"MapViewOfFile");
+			CloseHandle(hMapFile);
+			return 0;
+		}
+
+		ipcData = static_cast<IPCData*>(lpView);
+	}
+	else
+	{
+		FpsClamp::Log(L"shared memory is not available yet, continuing without IPC");
+	}
 
 	if (!SetupData())
 	{
-		ipcData->Status = IPCStatus::Error;
+		FpsClamp::Log(L"frame rate variable was not found, clamp cannot be applied");
+		if (ipcData)
+			ipcData->Status = IPCStatus::Error;
+
 		return 0;
+	}
+
+	// Optional: keep the client from seeing the unlocked value. A failure here must not
+	// stop the unlocker, so it is reported and the loop below keeps running. The user can
+	// turn the whole thing off through FpsClamp.ini next to this stub (package GUI writes it).
+	if (!FpsClamp::IsEnabled())
+	{
+		FpsClamp::Log(L"clamp disabled by %s, the frame rate getter is left alone", FpsClamp::SettingsPath().c_str());
+	}
+	else
+	{
+		std::wstring clampError;
+		if (!FpsClamp::Install(pFramerate, clampError))
+		{
+			FpsClamp::Log(L"clamp not applied: %s", clampError.c_str());
+			// A modal box on every launch would be worse than silence once a game update
+			// invalidates the clamp, so only ask for attention while logging is on.
+			if (ipcData && FpsClamp::IsLoggingEnabled())
+				Utils::ShowError(L"High frame rate detection prevention was not applied\n" + clampError);
+		}
+		else
+		{
+			FpsClamp::Log(L"frame rate clamp installed, waiting for the launcher's shared memory");
+		}
+	}
+
+	if (!ipcData)
+	{
+		for (int attempt = 0; attempt < 50 && !hMapFile; attempt++)
+		{
+			Sleep(100);
+			hMapFile = OpenFileMappingA(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, szGuid);
+		}
+
+		if (hMapFile)
+			lpView = MapViewOfFile(hMapFile, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+
+		ipcData = lpView ? static_cast<IPCData*>(lpView) : nullptr;
+
+		if (!ipcData)
+		{
+			FpsClamp::Log(L"no shared memory within 5 s, this instance only applies the clamp");
+			return 0;
+		}
+
+		FpsClamp::Log(L"shared memory attached, running the unlock loop");
 	}
 
 	ipcData->Status = IPCStatus::Ready;

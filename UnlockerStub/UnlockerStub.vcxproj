@@ -219,10 +219,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="FpsClamp.cpp" />
+    <ClCompile Include="FpsClampResolve.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Zydis.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FpsClamp.h" />
+    <ClInclude Include="FpsClampResolve.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Zydis.h" />
   </ItemGroup>
