@@ -20,12 +20,12 @@ namespace unlockfps_nc
 
         private void LinkLabelSource_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            OpenLink("https://github.com/34736384/genshin-fps-unlock");
+            OpenLink("https://github.com/AizawaHikaru233/genshin-fps-unlock");
         }
 
         private void LinkLabelIssues_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            OpenLink("https://github.com/34736384/genshin-fps-unlock/issues");
+            OpenLink("https://github.com/AizawaHikaru233/genshin-fps-unlock/issues");
         }
 
         private void OpenLink(string url)

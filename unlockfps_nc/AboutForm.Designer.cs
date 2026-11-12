@@ -30,6 +30,7 @@
         {
             LabelTitle = new Label();
             LabelDescription = new Label();
+            LabelFork = new Label();
             LinkLabelSource = new LinkLabel();
             LinkLabelIssues = new LinkLabel();
             SuspendLayout();
@@ -53,28 +54,37 @@
             LabelDescription.Text = "This program is free and open source";
             LabelDescription.TextAlign = ContentAlignment.MiddleCenter;
             // 
+            // LabelFork
+            // 
+            LabelFork.Location = new Point(12, 65);
+            LabelFork.Name = "LabelFork";
+            LabelFork.Size = new Size(320, 20);
+            LabelFork.TabIndex = 2;
+            LabelFork.Text = "Unofficial fork of 34736384/genshin-fps-unlock";
+            LabelFork.TextAlign = ContentAlignment.MiddleCenter;
+            // 
             // LinkLabelSource
             // 
-            LinkLabelSource.LinkArea = new LinkArea(8, 46);
-            LinkLabelSource.Location = new Point(12, 65);
+            LinkLabelSource.LinkArea = new LinkArea(8, 53);
+            LinkLabelSource.Location = new Point(12, 85);
             LinkLabelSource.Name = "LinkLabelSource";
             LinkLabelSource.Size = new Size(320, 20);
-            LinkLabelSource.TabIndex = 2;
+            LinkLabelSource.TabIndex = 3;
             LinkLabelSource.TabStop = true;
-            LinkLabelSource.Text = "Source: https://github.com/34736384/genshin-fps-unlock";
+            LinkLabelSource.Text = "Source: https://github.com/AizawaHikaru233/genshin-fps-unlock";
             LinkLabelSource.TextAlign = ContentAlignment.MiddleCenter;
             LinkLabelSource.UseCompatibleTextRendering = true;
             LinkLabelSource.LinkClicked += LinkLabelSource_LinkClicked;
             // 
             // LinkLabelIssues
             // 
-            LinkLabelIssues.LinkArea = new LinkArea(84, 53);
-            LinkLabelIssues.Location = new Point(12, 85);
+            LinkLabelIssues.LinkArea = new LinkArea(84, 60);
+            LinkLabelIssues.Location = new Point(12, 105);
             LinkLabelIssues.Name = "LinkLabelIssues";
             LinkLabelIssues.Size = new Size(320, 67);
-            LinkLabelIssues.TabIndex = 3;
+            LinkLabelIssues.TabIndex = 4;
             LinkLabelIssues.TabStop = true;
-            LinkLabelIssues.Text = "If you encounter any problems or have a suggestion\r\nGo ahead and submit an issue at\r\n\r\nhttps://github.com/34736384/genshin-fps-unlock/issues\r\n\r\n";
+            LinkLabelIssues.Text = "If you encounter any problems or have a suggestion\r\nGo ahead and submit an issue at\r\n\r\nhttps://github.com/AizawaHikaru233/genshin-fps-unlock/issues\r\n\r\n";
             LinkLabelIssues.TextAlign = ContentAlignment.MiddleCenter;
             LinkLabelIssues.UseCompatibleTextRendering = true;
             LinkLabelIssues.LinkClicked += LinkLabelIssues_LinkClicked;
@@ -83,9 +93,10 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(344, 171);
+            ClientSize = new Size(344, 191);
             Controls.Add(LinkLabelIssues);
             Controls.Add(LinkLabelSource);
+            Controls.Add(LabelFork);
             Controls.Add(LabelDescription);
             Controls.Add(LabelTitle);
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -104,5 +115,6 @@
         private Label LabelDescription;
         private LinkLabel LinkLabelSource;
         private LinkLabel LinkLabelIssues;
+        private Label LabelFork;
     }
 }
