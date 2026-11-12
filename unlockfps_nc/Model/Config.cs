@@ -23,6 +23,12 @@ namespace unlockfps_nc.Model
         public bool UseHDR { get; set; }
 
         public int FPSTarget { get; set; } = 120;
+
+        // Makes the game read a stock frame rate tier while the real one stays unlocked,
+        // so an anti-cheat watching the frame rate does not see the unlocked value. Read by
+        // UnlockerStub.dll from this same file; defaults to on.
+        public bool FpsClamp { get; set; } = true;
+
         public int CustomResX { get; set; } = 1920;
         public int CustomResY { get; set; } = 1080;
         public int MonitorNum { get; set; } = 1;

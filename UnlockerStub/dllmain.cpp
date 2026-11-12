@@ -374,8 +374,9 @@ DWORD __stdcall ThreadProc(LPVOID lpParameter)
 	}
 
 	// Optional: keep the client from seeing the unlocked value. A failure here must not
-	// stop the unlocker, so it is reported and the loop below keeps running. The user can
-	// turn the whole thing off through FpsClamp.ini next to this stub (package GUI writes it).
+	// stop the unlocker, so it is reported and the loop below keeps running. The switch is
+	// the unlocker's own fps_config.json next to this stub ("FpsClamp"), so the package GUI
+	// can offer it with the rest of the launcher settings.
 	if (!FpsClamp::IsEnabled())
 	{
 		FpsClamp::Log(L"clamp disabled by %s, the frame rate getter is left alone", FpsClamp::SettingsPath().c_str());
@@ -383,17 +384,27 @@ DWORD __stdcall ThreadProc(LPVOID lpParameter)
 	else
 	{
 		std::wstring clampError;
-		if (!FpsClamp::Install(pFramerate, clampError))
+
+		switch (FpsClamp::Install(pFramerate, clampError))
 		{
-			FpsClamp::Log(L"clamp not applied: %s", clampError.c_str());
-			// A modal box on every launch would be worse than silence once a game update
-			// invalidates the clamp, so only ask for attention while logging is on.
-			if (ipcData && FpsClamp::IsLoggingEnabled())
-				Utils::ShowError(L"High frame rate detection prevention was not applied\n" + clampError);
-		}
-		else
-		{
-			FpsClamp::Log(L"frame rate clamp installed, waiting for the launcher's shared memory");
+			case FpsClamp::Status::Installed:
+				FpsClamp::Log(L"frame rate clamp installed, waiting for the launcher's shared memory");
+				break;
+
+			case FpsClamp::Status::AlreadyInstalled:
+				// Expected when the launcher also injects this stub through DllList: the
+				// earlier copy owns the patch and this one only runs the unlock loop.
+				FpsClamp::Log(L"clamp already installed by another copy of the stub");
+				break;
+
+			case FpsClamp::Status::Failed:
+				FpsClamp::Log(L"clamp not applied: %s", clampError.c_str());
+				// A modal box on every launch would be worse than silence once a game update
+				// invalidates the clamp, so only ask for attention when the launcher is the
+				// caller (the DllList copy runs before there is a window to own the box).
+				if (ipcData)
+					Utils::ShowError(L"High frame rate detection prevention was not applied\n" + clampError);
+				break;
 		}
 	}
 

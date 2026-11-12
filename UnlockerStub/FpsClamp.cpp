@@ -74,11 +74,11 @@ namespace
 		}
 	}
 
-	bool Fail(std::wstring& reason, std::wstring message)
+	FpsClamp::Status Fail(std::wstring& reason, std::wstring message)
 	{
 		reason = std::move(message);
 		LogToFile(reason.c_str());
-		return false;
+		return FpsClamp::Status::Failed;
 	}
 
 	// Every executable section of the game module. The getter used to be looked up in the
@@ -107,13 +107,66 @@ namespace
 		return regions;
 	}
 
+	// fps_config.json is written by the launcher (UTF-8 with BOM, indented) and already
+	// holds the frame rate and the DLL list, so the switch lives there instead of in a file
+	// of its own. Both the key and its value are plain ASCII: an exact-match scan is used
+	// rather than a JSON parser, and anything that does not look like a boolean falls back
+	// to the default.
+	bool ReadBooleanSetting(const wchar_t* key, bool fallback)
+	{
+		const HANDLE file = CreateFileW(FpsClamp::SettingsPath().c_str(), GENERIC_READ,
+			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+		if (file == INVALID_HANDLE_VALUE)
+			return fallback;
+
+		std::string text;
+		char buffer[4096];
+		DWORD read = 0;
+		while (text.size() < 256 * 1024 && ReadFile(file, buffer, sizeof(buffer), &read, nullptr) && read > 0)
+			text.append(buffer, read);
+
+		CloseHandle(file);
+
+		std::string needle = "\"";
+		for (const wchar_t* p = key; *p; p++)
+			needle += static_cast<char>(*p);
+		needle += "\"";
+
+		const auto skipSpace = [&text](size_t position)
+		{
+			while (position < text.size() && (text[position] == ' ' || text[position] == '\t' ||
+				text[position] == '\r' || text[position] == '\n'))
+				position++;
+
+			return position;
+		};
+
+		size_t cursor = 0;
+		while ((cursor = text.find(needle, cursor)) != std::string::npos)
+		{
+			cursor = skipSpace(cursor + needle.size());
+			if (cursor >= text.size() || text[cursor] != ':')
+				continue;
+
+			cursor = skipSpace(cursor + 1);
+
+			if (text.compare(cursor, 4, "true") == 0 || text.compare(cursor, 1, "1") == 0)
+				return true;
+
+			if (text.compare(cursor, 5, "false") == 0 || text.compare(cursor, 1, "0") == 0)
+				return false;
+
+			return fallback;
+		}
+
+		return fallback;
+	}
+
 	// No debug output viewer is installed on the test machine and the stub runs inside the
 	// game, so the install result is also appended to %TEMP%\fpsclamp.log. Written once at
 	// install time only; the frame loop never touches this.
 	void LogToFile(const wchar_t* message)
 	{
-		if (!FpsClamp::IsLoggingEnabled())
-			return;
 
 		wchar_t directory[MAX_PATH]{};
 		if (!GetTempPathW(MAX_PATH, directory))
@@ -170,21 +223,21 @@ std::wstring FpsClamp::SettingsPath()
 		HMODULE self = nullptr;
 
 		// Any address inside this DLL maps back to its own module, which is where the
-		// launcher extracts the stub and where the package GUI writes the settings file.
+		// launcher extracts the stub: fps_config.json sits in that same directory.
 		if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
 			reinterpret_cast<LPCWSTR>(&FpsClamp::IsEnabled), &self))
-			return std::wstring(L"FpsClamp.ini");
+			return std::wstring(L"fps_config.json");
 
 		const auto length = GetModuleFileNameW(self, module, MAX_PATH);
 		if (length == 0 || length == MAX_PATH)
-			return std::wstring(L"FpsClamp.ini");
+			return std::wstring(L"fps_config.json");
 
 		std::wstring directory(module, length);
 		const auto slash = directory.find_last_of(L'\\');
 		if (slash != std::wstring::npos)
 			directory.resize(slash + 1);
 
-		return directory + L"FpsClamp.ini";
+		return directory + L"fps_config.json";
 	}();
 
 	return path;
@@ -192,18 +245,26 @@ std::wstring FpsClamp::SettingsPath()
 
 bool FpsClamp::IsEnabled()
 {
-	return GetPrivateProfileIntW(L"FpsClamp", L"Enabled", 1, SettingsPath().c_str()) != 0;
+	return ReadBooleanSetting(L"FpsClamp", true);
 }
 
-bool FpsClamp::IsLoggingEnabled()
-{
-	return GetPrivateProfileIntW(L"FpsClamp", L"Log", 1, SettingsPath().c_str()) != 0;
-}
-
-bool FpsClamp::Install(const int32_t* expectedVariable, std::wstring& reason)
+FpsClamp::Status FpsClamp::Install(const int32_t* expectedVariable, std::wstring& reason)
 {
 	if (g_getter)
-		return true;
+		return Status::Installed;
+
+	// Two copies of the stub can end up in the game process: the one the launcher injects
+	// with its window hook, and one injected earlier through the launcher's DllList. The
+	// first to arrive patches the getter, so the other has to recognise a leaf that no
+	// longer matches instead of reporting a broken install. The mutex is named after the
+	// process id, so it only ever collides inside this one process.
+	static HANDLE single = CreateMutexW(nullptr, TRUE,
+		(L"Local\\FpsClamp_" + std::to_wstring(GetCurrentProcessId())).c_str());
+	if (single && GetLastError() == ERROR_ALREADY_EXISTS)
+	{
+		Trace(L"another copy of the stub already installed the clamp, nothing to do here");
+		return Status::AlreadyInstalled;
+	}
 
 	const auto moduleBase = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
 	Trace(L"install requested, game module base %p, variable %p, settings %s", reinterpret_cast<void*>(moduleBase),
@@ -285,7 +346,7 @@ bool FpsClamp::Install(const int32_t* expectedVariable, std::wstring& reason)
 
 	Trace(L"[FPS Unlocker] frame rate clamp installed: getter %p -> stub %p, variable %p (reads %d), via %s [%s]",
 		getter, stub, getterVariable, *getterVariable, resolution.via.c_str(), resolution.detail.c_str());
-	return true;
+	return Status::Installed;
 }
 
 void FpsClamp::Uninstall()
