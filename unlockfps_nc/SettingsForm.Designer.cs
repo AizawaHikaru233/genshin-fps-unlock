@@ -39,6 +39,7 @@
             CBStartMinimized = new CheckBox();
             TabLaunchOptions = new TabPage();
             CBUseMobileUI = new CheckBox();
+            CBFpsClamp = new CheckBox();
             InputMonitorNum = new NumericUpDown();
             LabelMonitor = new Label();
             ComboFullscreenMode = new ComboBox();
@@ -86,7 +87,7 @@
             TabCtrlSettings.Location = new Point(12, 27);
             TabCtrlSettings.Name = "TabCtrlSettings";
             TabCtrlSettings.SelectedIndex = 0;
-            TabCtrlSettings.Size = new Size(260, 222);
+            TabCtrlSettings.Size = new Size(260, 247);
             TabCtrlSettings.TabIndex = 1;
             // 
             // TabGeneral
@@ -100,7 +101,7 @@
             TabGeneral.Location = new Point(4, 24);
             TabGeneral.Name = "TabGeneral";
             TabGeneral.Padding = new Padding(3);
-            TabGeneral.Size = new Size(252, 194);
+            TabGeneral.Size = new Size(252, 219);
             TabGeneral.TabIndex = 0;
             TabGeneral.Text = "General";
             TabGeneral.UseVisualStyleBackColor = true;
@@ -160,6 +161,7 @@
             // TabLaunchOptions
             // 
             TabLaunchOptions.Controls.Add(CBUseMobileUI);
+            TabLaunchOptions.Controls.Add(CBFpsClamp);
             TabLaunchOptions.Controls.Add(InputMonitorNum);
             TabLaunchOptions.Controls.Add(LabelMonitor);
             TabLaunchOptions.Controls.Add(ComboFullscreenMode);
@@ -174,7 +176,7 @@
             TabLaunchOptions.Location = new Point(4, 24);
             TabLaunchOptions.Name = "TabLaunchOptions";
             TabLaunchOptions.Padding = new Padding(3);
-            TabLaunchOptions.Size = new Size(252, 194);
+            TabLaunchOptions.Size = new Size(252, 219);
             TabLaunchOptions.TabIndex = 1;
             TabLaunchOptions.Text = "Launch Options";
             TabLaunchOptions.UseVisualStyleBackColor = true;
@@ -189,9 +191,20 @@
             CBUseMobileUI.Text = "Use Mobile UI";
             CBUseMobileUI.UseVisualStyleBackColor = true;
             // 
+            // CBFpsClamp
+            // 
+            CBFpsClamp.AutoSize = true;
+            CBFpsClamp.Location = new Point(6, 106);
+            CBFpsClamp.Name = "CBFpsClamp";
+            CBFpsClamp.Size = new Size(168, 19);
+            CBFpsClamp.TabIndex = 12;
+            CBFpsClamp.Text = "Hide Unlocked Frame Rate";
+            ToolTipSettings.SetToolTip(CBFpsClamp, "The game is told 60/45/30 fps while the unlocked frame rate still applies\r\nTurn this off to test how detection behaves without it");
+            CBFpsClamp.UseVisualStyleBackColor = true;
+            // 
             // InputMonitorNum
             // 
-            InputMonitorNum.Location = new Point(111, 168);
+            InputMonitorNum.Location = new Point(111, 193);
             InputMonitorNum.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             InputMonitorNum.Name = "InputMonitorNum";
             InputMonitorNum.Size = new Size(135, 23);
@@ -201,7 +214,7 @@
             // LabelMonitor
             // 
             LabelMonitor.AutoSize = true;
-            LabelMonitor.Location = new Point(6, 170);
+            LabelMonitor.Location = new Point(6, 195);
             LabelMonitor.Name = "LabelMonitor";
             LabelMonitor.Size = new Size(56, 15);
             LabelMonitor.TabIndex = 9;
@@ -211,7 +224,7 @@
             // 
             ComboFullscreenMode.FormattingEnabled = true;
             ComboFullscreenMode.Items.AddRange(new object[] { "Borderless", "Exclusive" });
-            ComboFullscreenMode.Location = new Point(111, 139);
+            ComboFullscreenMode.Location = new Point(111, 164);
             ComboFullscreenMode.Name = "ComboFullscreenMode";
             ComboFullscreenMode.Size = new Size(135, 23);
             ComboFullscreenMode.TabIndex = 8;
@@ -220,7 +233,7 @@
             // LabelWindowMode
             // 
             LabelWindowMode.AutoSize = true;
-            LabelWindowMode.Location = new Point(6, 142);
+            LabelWindowMode.Location = new Point(6, 167);
             LabelWindowMode.Name = "LabelWindowMode";
             LabelWindowMode.Size = new Size(97, 15);
             LabelWindowMode.TabIndex = 7;
@@ -228,7 +241,7 @@
             // 
             // InputResY
             // 
-            InputResY.Location = new Point(191, 110);
+            InputResY.Location = new Point(191, 135);
             InputResY.Maximum = new decimal(new int[] { 4320, 0, 0, 0 });
             InputResY.Minimum = new decimal(new int[] { 200, 0, 0, 0 });
             InputResY.Name = "InputResY";
@@ -239,7 +252,7 @@
             // LabelX
             // 
             LabelX.AutoSize = true;
-            LabelX.Location = new Point(172, 112);
+            LabelX.Location = new Point(172, 137);
             LabelX.Name = "LabelX";
             LabelX.Size = new Size(13, 15);
             LabelX.TabIndex = 5;
@@ -247,7 +260,7 @@
             // 
             // InputResX
             // 
-            InputResX.Location = new Point(111, 110);
+            InputResX.Location = new Point(111, 135);
             InputResX.Maximum = new decimal(new int[] { 7680, 0, 0, 0 });
             InputResX.Minimum = new decimal(new int[] { 200, 0, 0, 0 });
             InputResX.Name = "InputResX";
@@ -258,7 +271,7 @@
             // LabelCustomRes
             // 
             LabelCustomRes.AutoSize = true;
-            LabelCustomRes.Location = new Point(6, 112);
+            LabelCustomRes.Location = new Point(6, 137);
             LabelCustomRes.Name = "LabelCustomRes";
             LabelCustomRes.Size = new Size(69, 15);
             LabelCustomRes.TabIndex = 3;
@@ -307,7 +320,7 @@
             TabDlls.Location = new Point(4, 24);
             TabDlls.Name = "TabDlls";
             TabDlls.Padding = new Padding(3);
-            TabDlls.Size = new Size(252, 194);
+            TabDlls.Size = new Size(252, 219);
             TabDlls.TabIndex = 2;
             TabDlls.Text = "DLLs";
             TabDlls.UseVisualStyleBackColor = true;
@@ -389,7 +402,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(284, 261);
+            ClientSize = new Size(284, 286);
             Controls.Add(TabCtrlSettings);
             Controls.Add(LabelAutoSave);
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -444,6 +457,7 @@
         private ToolTip ToolTipSettings;
         private CheckBox CBSuspendLoad;
         private CheckBox CBUseMobileUI;
+        private CheckBox CBFpsClamp;
         private OpenFileDialog DllAddDialog;
         private CheckBox CBHdr;
     }
