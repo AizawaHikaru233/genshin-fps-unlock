@@ -14,6 +14,23 @@ namespace unlockfps_nc
         public static IServiceProvider ServiceProvider { get; private set; }
         public static int Version => 3600;
 
+        /// <summary>Version as it is shown to the user (3.6.0 for 3600), see <see cref="FormatVersion"/>.</summary>
+        public static string VersionText => FormatVersion(Version);
+
+        /// <summary>Converts the packed version number (3.6.0 -> 3600) back to "3.6.0".</summary>
+        public static string FormatVersion(int versionNumber)
+        {
+            string version = versionNumber.ToString();
+            string major = version[0].ToString();
+            string minor = version[1].ToString();
+            string build = int.Parse(version.Substring(2)).ToString();
+            string originalBuild = version.Substring(2);
+            if (originalBuild.Length > 1 && !originalBuild.EndsWith("0"))
+                build = originalBuild;
+
+            return $"{major}.{minor}.{build}";
+        }
+
         [STAThread]
         static void Main()
         {

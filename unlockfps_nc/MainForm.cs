@@ -140,16 +140,19 @@ namespace unlockfps_nc
 
         async Task CheckVersion()
         {
-
+            // This fork checks its own releases. The upstream endpoint (ys.ex-m.net) reports
+            // upstream builds only, and its link opens a release without the fork's changes.
             using var client = new HttpClient();
             try
             {
-                var response = await client.GetAsync("https://ys.ex-m.net/fps-unlock/version");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("unlockfps_nc");
+                var response = await client.GetAsync("https://api.github.com/repos/AizawaHikaru233/genshin-fps-unlock/releases/latest");
                 response.EnsureSuccessStatusCode();
                 var content = await response.Content.ReadAsStringAsync();
-                var remoteVersion = JsonSerializer.Deserialize<VersionInfo>(content);
-                
-                if (remoteVersion == null || remoteVersion.Version <= Program.Version)
+                var release = JsonSerializer.Deserialize<VersionInfo>(content);
+                var remoteVersion = release?.ToVersionNumber() ?? 0;
+
+                if (remoteVersion <= Program.Version)
                     return;
 
                 var utcNow = DateTimeOffset.UtcNow;
@@ -157,33 +160,36 @@ namespace unlockfps_nc
                 if (utcNow - lastNotify < TimeSpan.FromDays(7))
                     return;
 
-                var message = $@"A new version is available!{Environment.NewLine}" +
-                              $@"Current version: {Program.Version}{Environment.NewLine}" +
-                              $@"Latest version: {remoteVersion.Version}{Environment.NewLine}" +
-                              $@"Would you like to go to the release page?";
+                var releaseUrl = string.IsNullOrEmpty(release?.HtmlUrl)
+                    ? "https://github.com/AizawaHikaru233/genshin-fps-unlock/releases"
+                    : release!.HtmlUrl;
 
-                var result = MessageBox.Show(message, @"FPS Unlocker", MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1,
-                    MessageBoxOptions.DefaultDesktopOnly);
-                
-                if (result == DialogResult.Yes) {
+                var message = $"A new version is available!{Environment.NewLine}" +
+                              $"Current version: {Program.VersionText}{Environment.NewLine}" +
+                              $"Latest version: {Program.FormatVersion(remoteVersion)}{Environment.NewLine}" +
+                              $"Would you like to go to the release page?";
+
+                var result = MessageBox.Show(message, "FPS Unlocker", MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
+
+                if (result == DialogResult.Yes)
+                {
                     var psi = new ProcessStartInfo
                     {
-                        FileName = remoteVersion.Url,
+                        FileName = releaseUrl,
                         UseShellExecute = true
                     };
                     Process.Start(psi);
                 }
-                else {
+                else
+                {
                     _config.LastVersionNotify = utcNow.ToUnixTimeSeconds();
                     _configService.Save();
                 }
-
             }
             catch
             {
                 // ignored
             }
-
         }
 
     }
